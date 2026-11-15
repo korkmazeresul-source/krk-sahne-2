@@ -29,10 +29,10 @@ function initThreeHalay(){
  const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'low-power'});
  renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.5));renderer.setSize(w,h);host.appendChild(renderer.domElement);
  const world=new THREE.Scene();world.background=new THREE.Color(0x142b30);
- const camera=new THREE.PerspectiveCamera(37,w/h,.1,100);camera.position.set(0,4.5,13);camera.lookAt(0,1.5,0);
+ const camera=new THREE.PerspectiveCamera(37,w/h,.1,100);camera.position.set(0,3.6,15);camera.lookAt(0,1.35,0);
  world.add(new THREE.HemisphereLight(0xffeed4,0x34504c,2.2));
  const lamp=new THREE.DirectionalLight(0xffdfac,2.5);lamp.position.set(-3,8,5);world.add(lamp);
- const floor=new THREE.Mesh(new THREE.CylinderGeometry(9,9,.18,48),new THREE.MeshStandardMaterial({color:0x40594c,roughness:.8}));floor.position.y=-.15;world.add(floor);
+ const floor=new THREE.Mesh(new THREE.CylinderGeometry(5.8,5.8,.12,48),new THREE.MeshStandardMaterial({color:0x40594c,roughness:.8}));floor.position.y=-.15;world.add(floor);
  const mats={skin:new THREE.MeshStandardMaterial({color:0xd9a17b}),hair:new THREE.MeshStandardMaterial({color:0x211918}),white:new THREE.MeshStandardMaterial({color:0xfff7e8}),dark:new THREE.MeshStandardMaterial({color:0x202734}),red:new THREE.MeshStandardMaterial({color:0x9e3436}),gold:new THREE.MeshStandardMaterial({color:0xf0bd62}),green:new THREE.MeshStandardMaterial({color:0x285b4b})};
  const ball=(parent,r,mat,x,y,z)=>{const m=new THREE.Mesh(new THREE.SphereGeometry(r,10,8),mat);m.position.set(x,y,z);parent.add(m);return m};
  const limb=(parent,mat,r1,r2,len,x,y,z)=>{const m=new THREE.Mesh(new THREE.CylinderGeometry(r1,r2,len,9),mat);m.position.set(x,y,z);parent.add(m);return m};
@@ -60,14 +60,14 @@ function makeNameLabel(username,role){
  ctx.fillText(short,256,56);
  const texture=new THREE.CanvasTexture(canvas);texture.minFilter=THREE.LinearFilter;
  const material=new THREE.SpriteMaterial({map:texture,transparent:true,depthTest:false});
- const sprite=new THREE.Sprite(material);sprite.scale.set(1.65,.36,1);sprite.position.set(0,2.95,.1);sprite.renderOrder=20;return sprite
+ const sprite=new THREE.Sprite(material);sprite.scale.set(1.1,.27,1);sprite.position.set(0,2.95,.1);sprite.renderOrder=20;return sprite
  }
   function sync(){
  const visible=visibleHalay(),seen=new Set(visible.map(n=>n.toLocaleLowerCase('tr-TR')));
- for(const [k,p] of active){if(!seen.has(k)){p.userData.leaving=true;p.userData.targetX=-7;active.delete(k)}}
+ for(const [k,p] of active){if(!seen.has(k)){p.userData.leaving=true;p.userData.leaveAt=clock.elapsedTime;p.userData.targetX=-5.8;active.delete(k)}}
  visible.forEach((n,i)=>{const k=n.toLocaleLowerCase('tr-TR'),role=roles[k]||'';let p=active.get(k);
- if(p&&p.userData.role!==role){const old=p;old.userData.leaving=true;old.userData.targetX=-7;active.delete(k);p=null}
- if(!p){p=dancer(role,i);p.position.x=7;p.userData.name=n;p.userData.role=role;p.userData.leaving=false;p.add(makeNameLabel(n,role));world.add(p);figures.push(p);active.set(k,p)}
+ if(p&&p.userData.role!==role){const old=p;old.userData.leaving=true;old.userData.leaveAt=clock.elapsedTime;old.userData.targetX=-5.8;active.delete(k);p=null}
+ if(!p){p=dancer(role,i);p.position.x=5.3;p.userData.name=n;p.userData.role=role;p.userData.leaving=false;p.add(makeNameLabel(n,role));world.add(p);figures.push(p);active.set(k,p)}
  p.userData.targetX=(i-(visible.length-1)/2)*.77;p.userData.index=i;
  });
  }
@@ -79,7 +79,7 @@ function makeNameLabel(username,role){
  }
  const clock=new THREE.Clock();let frameCount=0,lastFpsTime=0;function disposeDancer(p){p.traverse(o=>{if(o.isSprite&&o.material){if(o.material.map)o.material.map.dispose();o.material.dispose()}})}
  function animate(){requestAnimationFrame(animate);if(!document.body.contains(host))return;
- const t=clock.getElapsedTime(),dt=Math.min(clock.getDelta(),.05);
+ const dt=Math.min(clock.getDelta(),.05),t=clock.elapsedTime;
  const event=special&&t<special.ends?special:null;
  figures.slice().forEach(p=>{
  const u=p.userData,phase=t*(event&&event.role==='Halayı coştur'?9:4.8)+u.index*.22;
@@ -96,9 +96,9 @@ function makeNameLabel(username,role){
  }
  if(isActor&&['Gelin ol','Damat ol','Halay başı'].includes(event.role)){z=progress<.6?1.1*(1-progress/.6):0}
  }
- p.position.x+=(x-p.position.x)*Math.min(1,dt*5);p.position.z+=(z-p.position.z)*Math.min(1,dt*5);
+ p.position.x+=(x-p.position.x)*Math.min(1,dt*8);p.position.z+=(z-p.position.z)*Math.min(1,dt*8);
  p.rotation.y=.10*Math.sin(t*.55+u.index*.2);
- if(u.leaving&&p.position.x< -6.6){world.remove(p);disposeDancer(p);const ix=figures.indexOf(p);if(ix>=0)figures.splice(ix,1)}
+ if(u.leaving&&(p.position.x< -5.5||t-(u.leaveAt||t)>1.5)){world.remove(p);disposeDancer(p);const ix=figures.indexOf(p);if(ix>=0)figures.splice(ix,1)}
  });
  if(special&&t>=special.ends){special=null;sync()}
  if(scene==='halay')renderer.render(world,camera);frameCount++;if(t-lastFpsTime>=3){const fps=Math.round(frameCount/(t-lastFpsTime));const perf=el('perfReadout');if(perf)perf.textContent='3D: '+fps+' FPS · '+figures.length+' aktif model';frameCount=0;lastFpsTime=t}
