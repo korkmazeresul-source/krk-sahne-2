@@ -27,9 +27,9 @@ function initThreeHalay(){
  try{
  const host=el('threeHalay'),w=host.clientWidth||350,h=host.clientHeight||255;
  const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'low-power'});
- renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.5));renderer.setSize(w,h);host.appendChild(renderer.domElement);
+ renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.5));renderer.setSize(w,h);renderer.domElement.style.width='100%';renderer.domElement.style.height='100%';host.appendChild(renderer.domElement);
  const world=new THREE.Scene();world.background=new THREE.Color(0x142b30);
- const camera=new THREE.PerspectiveCamera(37,w/h,.1,100);camera.position.set(0,2.5,14);camera.lookAt(0,1.35,0);
+ const camera=new THREE.PerspectiveCamera(37,w/h,.1,100);camera.position.set(0,3.0,11.8);camera.lookAt(0,1.45,0);
  world.add(new THREE.HemisphereLight(0xffeed4,0x34504c,2.2));
  const lamp=new THREE.DirectionalLight(0xffdfac,2.5);lamp.position.set(-3,8,5);world.add(lamp);
  const floor=new THREE.Mesh(new THREE.CylinderGeometry(5.8,5.8,.12,48),new THREE.MeshStandardMaterial({color:0x40594c,roughness:.8}));floor.position.y=-.15;/* no floor: prevents mobile perspective occlusion */
@@ -42,12 +42,12 @@ function initThreeHalay(){
   const outfit=bride?mats.white:groom?mats.dark:index%2?mats.red:mats.green;
   limb(body,outfit,.29,.35,.85,0,1.53,0);
   if(bride){const skirt=new THREE.Mesh(new THREE.ConeGeometry(.66,1.15,12),mats.white);skirt.position.y=.73;body.add(skirt);ball(body,.39,mats.white,0,2.39,-.19)}
-  else{limb(body,outfit,.18,.14,.78,-.19,.55,0);limb(body,outfit,.18,.14,.78,.19,.55,0)}
+  else{/* legs animated below */}
   ball(body,.24,mats.skin,0,2.24,0);ball(body,.255,mats.hair,0,2.38,-.08);
-  const arms=[];
+  const legs=[];for(const side of [-1,1]){const hip=new THREE.Group();hip.position.set(side*.18,1.12,0);body.add(hip);limb(hip,outfit,.13,.105,.67,0,-.34,0);const shoe=new THREE.Mesh(new THREE.BoxGeometry(.23,.13,.37),mats.dark);shoe.position.set(0,-.69,.12);hip.add(shoe);legs.push(hip)}const arms=[];
   for(const side of [-1,1]){const pivot=new THREE.Group();pivot.position.set(side*.32,1.84,0);body.add(pivot);const arm=limb(pivot,bride?mats.white:groom?mats.dark:mats.skin,.105,.08,.74,side*.32,-.08,0);arm.rotation.z=side*.85;arms.push(pivot)}
   if(leader){const cloth=new THREE.Mesh(new THREE.PlaneGeometry(.38,.3),mats.gold);cloth.position.set(-.83,2.04,.06);body.add(cloth)}
-  root.userData={body,arms,index};return root
+  root.userData={body,arms,legs,index};return root
  }
  const figures=[];const active=new Map();let special=null;
 function makeNameLabel(username,role){
@@ -83,8 +83,8 @@ function makeNameLabel(username,role){
  const event=special&&t<special.ends?special:null;
  figures.slice().forEach(p=>{
  const u=p.userData,phase=t*(event&&event.role==='Halayı coştur'?9:4.8)+u.index*.22;
- u.body.position.y=.07*Math.sin(phase);u.body.rotation.z=.065*Math.sin(phase);
- u.arms[0].rotation.z=.13*Math.sin(phase);u.arms[1].rotation.z=-.13*Math.sin(phase);
+ const beat=Math.sin(phase);u.body.position.y=.045*Math.abs(beat);u.body.rotation.z=.065*Math.sin(phase*.5);u.legs[0].rotation.x=.28*Math.sin(phase);u.legs[1].rotation.x=-.28*Math.sin(phase);u.legs[0].rotation.z=.10*Math.sin(phase*.5);u.legs[1].rotation.z=.10*Math.sin(phase*.5);
+ u.arms[0].rotation.z=.11*Math.sin(phase*.5);u.arms[1].rotation.z=-.11*Math.sin(phase*.5);
  let x=u.targetX??0,z=.14*Math.sin(u.index*.55+t*.28);
  if(event){
  const progress=Math.min(1,(t-event.start)/5),isActor=u.name&&u.name.toLocaleLowerCase('tr-TR')===event.user;
@@ -97,7 +97,7 @@ function makeNameLabel(username,role){
  if(isActor&&['Gelin ol','Damat ol','Halay başı'].includes(event.role)){z=progress<.6?1.1*(1-progress/.6):0}
  }
  p.position.x+=(x-p.position.x)*Math.min(1,dt*8);p.position.z+=(z-p.position.z)*Math.min(1,dt*8);
- p.rotation.y=.10*Math.sin(t*.55+u.index*.2);
+ p.rotation.y=.10*Math.sin(t*.55+u.index*.2);p.position.x+=.04*Math.sin(t*2.4);
  
  });
  if(special&&t>=special.ends){special=null;sync()}
@@ -106,7 +106,7 @@ function makeNameLabel(username,role){
  threeState={figures,world,dancer,renderer,camera,host,sync,giftAction};
  sync();animate();
  el('threeNotice').textContent='3D halay • Her 2,2 saniyede yeni oyuncular • Özel roller sabit';
- window.addEventListener('resize',()=>{const w=host.clientWidth||350,h=host.clientHeight||255;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix()});
+ const resizeStage=()=>{const w=Math.max(1,host.clientWidth),h=Math.max(1,host.clientHeight);renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()};window.addEventListener('resize',resizeStage);if(window.ResizeObserver)new ResizeObserver(resizeStage).observe(host);resizeStage();
  }catch(err){el('threeNotice').textContent='3D başlatılamadı; 2D yedek sahne kullanılabilir';el('people').style.display='flex'}
 }
 function updateThreeHalay(){if(threeState)threeState.sync()}
