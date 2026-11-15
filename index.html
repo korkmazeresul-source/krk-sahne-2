@@ -76,7 +76,7 @@ function initThreeHalay(){
   if(leader){const cloth=new THREE.Mesh(new THREE.PlaneGeometry(.42,.32),new THREE.MeshStandardMaterial({color:0xffd76a,side:THREE.DoubleSide}));cloth.position.set(-.7,1.75,.03);cloth.rotation.z=.5;arms[0].add(cloth)}
   root.userData={body,arms,elbows,legs,knees,index};return root
  }
- const figures=[];const active=new Map();let special=null;const glbTemplates={};const glbLoading=new Set();
+ const figures=[];const active=new Map();let special=null;const glbTemplates={};const glbLoading=new Set();const glbLoadedUrls={};
 function makeNameLabel(username,role){
  const canvas=document.createElement('canvas');canvas.width=512;canvas.height=112;
  const ctx=canvas.getContext('2d');ctx.clearRect(0,0,512,112);
@@ -89,8 +89,28 @@ function makeNameLabel(username,role){
  const material=new THREE.SpriteMaterial({map:texture,transparent:true,depthTest:false});
  const sprite=new THREE.Sprite(material);sprite.scale.set(1.1,.27,1);sprite.position.set(0,2.95,.1);sprite.renderOrder=20;return sprite
  }
-  function attachModel(p,role,index){const key=role==='Gelin ol'?'bride':role==='Damat ol'?'groom':'dancer',template=glbTemplates[key];if(!template)return;const old=p.userData.body;if(old)old.visible=false;const mesh=THREE.SkeletonUtils&&THREE.SkeletonUtils.clone?THREE.SkeletonUtils.clone(template.scene):template.scene.clone(true);mesh.scale.setScalar(1);const bounds=new THREE.Box3().setFromObject(mesh),size=new THREE.Vector3();bounds.getSize(size);if(size.y>0){mesh.scale.setScalar(Math.min(10,2.35/size.y));const b2=new THREE.Box3().setFromObject(mesh);mesh.position.y=-b2.min.y;}p.add(mesh);p.userData.glb=mesh;if(template.animations&&template.animations.length){const mixer=new THREE.AnimationMixer(mesh);const clip=template.animations.find(a=>/dance|samba|halay/i.test(a.name))||template.animations.find(a=>/walk/i.test(a.name))||template.animations[0];const action=mixer.clipAction(clip);action.setLoop(THREE.LoopRepeat,Infinity);action.play();p.userData.mixer=mixer;p.userData.hasAnimation=true}}
- function loadModels(){if(!THREE.GLTFLoader){el('modelStatus').textContent='GLB yükleyici bulunamadı; sayfayı yenileyin';return}const loader=new THREE.GLTFLoader();for(const key of Object.keys(modelUrls)){const url=modelUrls[key];if(!url||glbLoading.has(key))continue;delete glbTemplates[key];glbLoading.add(key);loader.load(url,gltf=>{glbTemplates[key]={scene:gltf.scene,animations:gltf.animations};glbLoading.delete(key);el('modelStatus').textContent='3D model yüklendi: '+key+(gltf.animations.length?' · '+gltf.animations.length+' animasyon':' · animasyon yok');sync(true)},undefined,err=>{glbLoading.delete(key);el('modelStatus').textContent='GLB yüklenemedi ('+key+'). HTTPS/CORS ve dosya bağlantısını kontrol edin.'})}}
+  function attachModel(p,role,index){const key=role==='Gelin ol'?'bride':role==='Damat ol'?'groom':'dancer',template=glbTemplates[key];if(!template)return;const old=p.userData.body;if(old)old.visible=false;const mesh=THREE.SkeletonUtils&&THREE.SkeletonUtils.clone?THREE.SkeletonUtils.clone(template.scene):template.scene.clone(true);mesh.scale.setScalar(1);const bounds=new THREE.Box3().setFromObject(mesh),size=new THREE.Vector3();bounds.getSize(size);if(size.y>0){mesh.scale.setScalar(Math.min(10,2.35/size.y));const b2=new THREE.Box3().setFromObject(mesh);mesh.position.y=-b2.min.y;}p.add(mesh);p.userData.glb=mesh;if(template.animations&&template.animations.length){const mixer=new THREE.AnimationMixer(mesh);const clip=template.animations.find(a=>/dance|samba|halay/i.test(a.name))||template.animations.find(a=>/walk/i.test(a.name))||template.animations[0];const action=mixer.clipAction(clip);action.setLoop(THREE.LoopRepeat,Infinity);action.play();p.userData.mixer=mixer;p.userData.hasAnimation=true;p.userData.clipName=clip.name}}
+ function loadModels(){
+ if(!THREE.GLTFLoader){el('modelStatus').textContent='GLB yükleyici bulunamadı';return}
+ const loader=new THREE.GLTFLoader();
+ for(const key of Object.keys(modelUrls)){
+  const url=modelUrls[key];
+  if(!url){if(glbLoadedUrls[key]){delete glbTemplates[key];delete glbLoadedUrls[key];sync(true)}continue}
+  if(glbLoading.has(key)||glbLoadedUrls[key]===url)continue;
+  glbLoading.add(key);
+  loader.load(url,gltf=>{
+   glbLoading.delete(key);
+   if(modelUrls[key]!==url){loadModels();return}
+   glbTemplates[key]={scene:gltf.scene,animations:gltf.animations};
+   glbLoadedUrls[key]=url;
+   el('modelStatus').textContent='Yüklendi: '+key+' · '+gltf.animations.length+' hareket klibi';
+   sync(true);
+  },undefined,err=>{
+   glbLoading.delete(key);
+   el('modelStatus').textContent='Yüklenemedi: '+key+' · Dosya/CORS/bağlantı kontrol edilmeli';
+  });
+ }
+ }
  function sync(force=false){
  const visible=visibleHalay(),seen=new Set(visible.map(n=>n.toLocaleLowerCase('tr-TR')));
  for(const [k,p] of active){if(!seen.has(k)){world.remove(p);disposeDancer(p);figures.splice(figures.indexOf(p),1);active.delete(k)}}
@@ -111,7 +131,7 @@ function makeNameLabel(username,role){
  const dt=Math.min(clock.getDelta(),.05),t=clock.elapsedTime;
  const event=special&&t<special.ends?special:null;
  figures.slice().forEach(p=>{
- const u=p.userData,speed=event&&event.role==='Halayı coştur'?1.7:1;if(u.mixer)u.mixer.update(dt*speed);
+ const u=p.userData,speed=event&&event.role==='Halayı coştur'?1.7:1;if(u.mixer)u.mixer.update(dt*speed);if(u.glb){const walk=Math.sin(t*3.5*speed+u.index*.13);u.glb.rotation.z=.045*Math.sin(t*1.75*speed);u.glb.rotation.y=.09*Math.sin(t*1.75*speed);if(!u.hasAnimation){u.glb.position.y=.045*Math.abs(walk)}}
  const phase=(t*3.5*speed+u.index*.13)%(Math.PI*2),step=Math.sin(phase),shift=Math.sin(phase*.5);
  u.body.position.y=.065*Math.max(0,Math.sin(phase*2));u.body.rotation.z=.055*shift;
  u.body.rotation.y=.065*Math.sin(phase);
@@ -123,7 +143,7 @@ function makeNameLabel(username,role){
  let x=u.targetX??0,z=.14*Math.sin(u.index*.55+t*.28);
  if(event){
  const progress=Math.min(1,(t-event.start)/5),isActor=u.name&&u.name.toLocaleLowerCase('tr-TR')===event.user;
- if(event.role==='Ortada oyna'&&isActor){x=0;z=2.3;u.body.rotation.y=t*3}
+ if(event.role==='Ortada oyna'&&isActor){x=0;z=2.3;p.rotation.y=t*2.4}
  if(event.role==='Gelini kaçır'){
  const bride=currentRoleHolder('Gelin ol');const isBride=bride&&u.name===bride;
  if(isActor){x=progress<.35?2.8*(1-progress/.35):progress<.55?0:Math.min(7,(progress-.55)*17);z=2}
@@ -132,7 +152,7 @@ function makeNameLabel(username,role){
  if(isActor&&['Gelin ol','Damat ol','Halay başı'].includes(event.role)){z=progress<.6?1.1*(1-progress/.6):0}
  }
  p.position.x+=(x-p.position.x)*Math.min(1,dt*8);p.position.z+=(z-p.position.z)*Math.min(1,dt*8);
- p.rotation.y=.08*Math.sin(t*.55+u.index*.2);
+ if(!(event&&event.role==='Ortada oyna'&&u.name&&u.name.toLocaleLowerCase('tr-TR')===event.user))p.rotation.y=.08*Math.sin(t*.55+u.index*.2);
  
  });
  if(special&&t>=special.ends){special=null;sync()}
