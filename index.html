@@ -22,7 +22,7 @@ setInterval(advanceParade,PARADE_INTERVAL);
 
 /* Procedural low-poly 3D dancers. Independent of TikTok transport. */
 const modelKeys={dancer:'glbDancer',bride:'glbBride',groom:'glbGroom'};const modelUrls={};for(const k of Object.keys(modelKeys)){modelUrls[k]=localStorage.getItem('krk-model-'+k)||''}
-function loadDemoHuman(){el('glbDancer').value='https://threejs.org/examples/models/gltf/Michelle.glb';saveModels()}function saveModels(){for(const k of Object.keys(modelKeys)){const v=el(modelKeys[k]).value.trim();if(v&&!/^https:\/\//i.test(v)){el('modelStatus').textContent='Model adresi HTTPS olmalı';return}modelUrls[k]=v;localStorage.setItem('krk-model-'+k,v)}el('modelStatus').textContent='Model adresleri kaydedildi. Modeller yükleniyor…';if(threeState)threeState.loadModels()}
+function loadDemoHuman(){el('glbDancer').value='https://raw.githubusercontent.com/mrdoob/three.js/r147/examples/models/gltf/Michelle.glb';saveModels()}function saveModels(){for(const k of Object.keys(modelKeys)){const v=el(modelKeys[k]).value.trim();if(v&&!/^https:\/\//i.test(v)){el('modelStatus').textContent='Model adresi HTTPS olmalı';return}modelUrls[k]=v;localStorage.setItem('krk-model-'+k,v)}el('modelStatus').textContent='Model adresleri kaydedildi. Modeller yükleniyor…';if(threeState)threeState.loadModels()}
 let threeState=null;
 function initThreeHalay(){
  if(threeState||!window.THREE)return;
@@ -89,7 +89,7 @@ function makeNameLabel(username,role){
  const material=new THREE.SpriteMaterial({map:texture,transparent:true,depthTest:false});
  const sprite=new THREE.Sprite(material);sprite.scale.set(1.1,.27,1);sprite.position.set(0,2.95,.1);sprite.renderOrder=20;return sprite
  }
-  function attachModel(p,role,index){const key=role==='Gelin ol'?'bride':role==='Damat ol'?'groom':'dancer',template=glbTemplates[key];if(!template)return;const old=p.userData.body;if(old)old.visible=false;const mesh=THREE.SkeletonUtils&&THREE.SkeletonUtils.clone?THREE.SkeletonUtils.clone(template.scene):template.scene.clone(true);mesh.scale.setScalar(1);const bounds=new THREE.Box3().setFromObject(mesh),size=new THREE.Vector3();bounds.getSize(size);if(size.y>0){const fit=2.05/Math.max(size.y,size.x,size.z);mesh.scale.setScalar(fit);const b2=new THREE.Box3().setFromObject(mesh);mesh.position.y=-b2.min.y;const center=new THREE.Vector3();b2.getCenter(center);mesh.position.x=-center.x;mesh.position.z=-center.z;}else{mesh.visible=false;old.visible=true;return}p.add(mesh);p.userData.glb=mesh;p.userData.glbBaseScale=mesh.scale.x;p.userData.glbLastCheck=0;if(template.animations&&template.animations.length){const mixer=new THREE.AnimationMixer(mesh);const clip=template.animations.find(a=>/dance|samba|halay/i.test(a.name))||template.animations.find(a=>/walk/i.test(a.name))||template.animations[0];const action=mixer.clipAction(clip);action.setLoop(THREE.LoopRepeat,Infinity);action.play();p.userData.mixer=mixer;p.userData.hasAnimation=true;p.userData.clipName=clip.name}}
+  function attachModel(p,role,index){const key=role==='Gelin ol'?'bride':role==='Damat ol'?'groom':'dancer',template=glbTemplates[key];if(!template)return;const old=p.userData.body;if(old)old.visible=false;const mesh=THREE.SkeletonUtils&&THREE.SkeletonUtils.clone?THREE.SkeletonUtils.clone(template.scene):template.scene.clone(true);mesh.scale.setScalar(1);const bounds=new THREE.Box3().setFromObject(mesh),size=new THREE.Vector3();bounds.getSize(size);if(size.y>0){const fit=2.15/Math.max(size.y,size.x,size.z);mesh.scale.setScalar(fit);const b2=new THREE.Box3().setFromObject(mesh);mesh.position.y=-b2.min.y;const center=new THREE.Vector3();b2.getCenter(center);mesh.position.x=-center.x;mesh.position.z=-center.z;}else{mesh.visible=false;old.visible=true;return}p.add(mesh);p.userData.glb=mesh;p.userData.glbBaseScale=mesh.scale.x;p.userData.glbLastCheck=0;if(template.animations&&template.animations.length){const mixer=new THREE.AnimationMixer(mesh);const clip=template.animations.find(a=>/dance|samba|halay/i.test(a.name))||template.animations.find(a=>/walk/i.test(a.name))||template.animations[0];const safeTracks=clip.tracks.filter(track=>track.name.endsWith('.quaternion')||track.name.endsWith('.morphTargetInfluences'));const safeClip=safeTracks.length?new THREE.AnimationClip(clip.name+'-inplace',clip.duration,safeTracks):null;if(safeClip){const action=mixer.clipAction(safeClip);action.setLoop(THREE.LoopRepeat,Infinity);action.play();p.userData.mixer=mixer;p.userData.hasAnimation=true;p.userData.clipName=clip.name}else{p.userData.hasAnimation=false}}}
  function loadModels(){
  if(!THREE.GLTFLoader){el('modelStatus').textContent='GLB yükleyici bulunamadı';return}
  const loader=new THREE.GLTFLoader();
@@ -136,7 +136,7 @@ function makeNameLabel(username,role){
  const bounds=new THREE.Box3().setFromObject(u.glb),size=new THREE.Vector3();
  bounds.getSize(size);
  const extent=Math.max(size.x,size.y,size.z);
- if(!Number.isFinite(extent)||extent>4.2||extent<.3){
+ if(!Number.isFinite(extent)||extent>3.2||extent<.3){
   u.glb.visible=false;u.body.visible=true;
   if(u.mixer){u.mixer.stopAllAction();u.mixer=null}
   u.glb=null;
