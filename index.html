@@ -50,12 +50,24 @@ function initThreeHalay(){
   root.userData={body,arms,index};return root
  }
  const figures=[];const active=new Map();let special=null;
- function sync(){
+function makeNameLabel(username,role){
+ const canvas=document.createElement('canvas');canvas.width=512;canvas.height=112;
+ const ctx=canvas.getContext('2d');ctx.clearRect(0,0,512,112);
+ ctx.fillStyle=role==='Gelin ol'?'#f7e5b0':role==='Damat ol'?'#d8e6ff':role==='Halay başı'?'#ffe07b':'#e9f6e9';
+ ctx.beginPath();ctx.roundRect(8,9,496,92,20);ctx.fill();
+ ctx.fillStyle='#172521';ctx.font='bold 43px system-ui, sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+ const label='@'+username;let short=label;while(ctx.measureText(short).width>460&&short.length>4)short=short.slice(0,-2)+'…';
+ ctx.fillText(short,256,56);
+ const texture=new THREE.CanvasTexture(canvas);texture.minFilter=THREE.LinearFilter;
+ const material=new THREE.SpriteMaterial({map:texture,transparent:true,depthTest:false});
+ const sprite=new THREE.Sprite(material);sprite.scale.set(1.65,.36,1);sprite.position.set(0,2.95,.1);sprite.renderOrder=20;return sprite
+ }
+  function sync(){
  const visible=visibleHalay(),seen=new Set(visible.map(n=>n.toLocaleLowerCase('tr-TR')));
  for(const [k,p] of active){if(!seen.has(k)){p.userData.leaving=true;p.userData.targetX=-7;active.delete(k)}}
  visible.forEach((n,i)=>{const k=n.toLocaleLowerCase('tr-TR'),role=roles[k]||'';let p=active.get(k);
  if(p&&p.userData.role!==role){const old=p;old.userData.leaving=true;old.userData.targetX=-7;active.delete(k);p=null}
- if(!p){p=dancer(role,i);p.position.x=7;p.userData.name=n;p.userData.role=role;p.userData.leaving=false;world.add(p);figures.push(p);active.set(k,p)}
+ if(!p){p=dancer(role,i);p.position.x=7;p.userData.name=n;p.userData.role=role;p.userData.leaving=false;p.add(makeNameLabel(n,role));world.add(p);figures.push(p);active.set(k,p)}
  p.userData.targetX=(i-(visible.length-1)/2)*.77;p.userData.index=i;
  });
  }
@@ -93,7 +105,7 @@ function initThreeHalay(){
  }
  threeState={figures,world,dancer,renderer,camera,host,sync,giftAction};
  sync();animate();
- el('threeNotice').textContent='3D halay • 10 dansçı görünür, diğerleri sırayla katılır';
+ el('threeNotice').textContent='3D halay • Kullanıcı adları karakterlerin üzerinde görünür';
  animate();
  window.addEventListener('resize',()=>{const w=host.clientWidth||350,h=host.clientHeight||255;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix()});
  }catch(err){el('threeNotice').textContent='3D başlatılamadı; 2D yedek sahne kullanılabilir';el('people').style.display='flex'}
